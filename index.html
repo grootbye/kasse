@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Kasse</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0e0e0f; --surface:#161618; --surface2:#1e1e21; --border:#2a2a2e;
+    --accent:#c8f135; --red:#ff4d4d; --blue:#4d9fff; --cash:#6dde8a;
+    --text:#f0f0f0; --muted:#666;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh}
+
+  /* NAV */
+  nav{display:flex;gap:0;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:20}
+  .nav-tab{flex:1;padding:14px 8px;text-align:center;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;letter-spacing:.3px}
+  .nav-tab.active{color:var(--accent);border-color:var(--accent)}
+
+  /* HEADER */
+  .page-header{padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between}
+  .logo{font-size:20px;font-weight:800;letter-spacing:-.5px}.logo span{color:var(--accent)}
+  .month-nav{display:flex;align-items:center;gap:10px;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)}
+  .month-nav button{background:var(--surface2);border:1px solid var(--border);color:var(--text);width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:14px}
+  #currentMonth{min-width:80px;text-align:center;color:var(--text);font-weight:600}
+
+  /* PAGES */
+  .page{display:none;padding:16px 20px 40px}
+  .page.active{display:block}
+
+  /* SUMMARY */
+  .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+  .sum-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;position:relative;overflow:hidden}
+  .sum-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+  .sum-card.total::before{background:var(--accent)}
+  .sum-card.card-pay::before{background:var(--blue)}
+  .sum-card.cash-pay::before{background:var(--cash)}
+  .sum-label{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px}
+  .sum-amount{font-size:18px;font-weight:700;letter-spacing:-1px}
+  .sum-card.total .sum-amount{color:var(--accent)}
+  .sum-card.card-pay .sum-amount{color:var(--blue)}
+  .sum-card.cash-pay .sum-amount{color:var(--cash)}
+  .sum-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-top:2px}
+
+  /* FORM */
+  .add-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px}
+  .add-box h3{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+  input,select{background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:9px 11px;width:100%;outline:none;transition:border-color .2s}
+  input:focus,select:focus{border-color:var(--accent)}
+  input::placeholder{color:var(--muted)}
+  select option{background:var(--surface2)}
+  .pay-toggle{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .pay-btn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;font-family:'Syne',sans-serif;font-size:12px;font-weight:600;padding:9px;text-align:center;transition:all .2s}
+  .pay-btn.active-card{background:rgba(77,159,255,.15);border-color:var(--blue);color:var(--blue)}
+  .pay-btn.active-cash{background:rgba(109,222,138,.15);border-color:var(--cash);color:var(--cash)}
+  .cat-grid{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+  .cat-pill{background:var(--surface2);border:1px solid var(--border);border-radius:16px;color:var(--muted);cursor:pointer;font-size:11px;font-weight:600;padding:4px 10px;transition:all .15s;white-space:nowrap}
+  .cat-pill.selected{background:rgba(200,241,53,.15);border-color:var(--accent);color:var(--accent)}
+  .btn-add{background:var(--accent);border:none;border-radius:10px;color:#0e0e0f;cursor:pointer;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;padding:11px;width:100%;transition:opacity .2s,transform .1s}
+  .btn-add:hover{opacity:.9}.btn-add:active{transform:scale(.98)}
+  .btn-add:disabled{opacity:.4;cursor:not-allowed}
+
+  /* TX LIST */
+  .tx-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .tx-header h3{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+  .export-btn{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;font-family:'DM Mono',monospace;font-size:10px;padding:4px 10px;transition:all .2s}
+  .export-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .filter-row{display:flex;gap:5px;margin-bottom:10px;overflow-x:auto;padding-bottom:2px}
+  .filter-row::-webkit-scrollbar{display:none}
+  .filter-pill{background:var(--surface2);border:1px solid var(--border);border-radius:16px;color:var(--muted);cursor:pointer;font-size:10px;font-weight:600;padding:3px 10px;white-space:nowrap;transition:all .15s}
+  .filter-pill.active{background:rgba(200,241,53,.1);border-color:var(--accent);color:var(--accent)}
+  .tx-list{display:flex;flex-direction:column;gap:6px}
+  .tx-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;animation:slideIn .2s ease}
+  .tx-item:hover{background:var(--surface2)}
+  @keyframes slideIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+  .tx-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+  .tx-info{flex:1;min-width:0}
+  .tx-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tx-meta{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-top:2px;display:flex;gap:6px;align-items:center}
+  .pay-badge{font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase}
+  .pay-badge.karte{background:rgba(77,159,255,.2);color:var(--blue)}
+  .pay-badge.bar{background:rgba(109,222,138,.2);color:var(--cash)}
+  .tx-amount{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:var(--red);flex-shrink:0}
+  .tx-delete{background:none;border:none;color:var(--border);cursor:pointer;font-size:15px;padding:3px;transition:color .2s;flex-shrink:0}
+  .tx-delete:hover{color:var(--red)}
+  .empty-state{text-align:center;padding:40px 0;color:var(--muted);font-family:'DM Mono',monospace;font-size:11px}
+  .empty-state .big{font-size:28px;margin-bottom:8px}
+
+  /* CAT BARS */
+  .chart-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:16px}
+  .chart-box h3{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+  .cat-bars{display:flex;flex-direction:column;gap:8px}
+  .cat-bar-row{display:flex;align-items:center;gap:8px}
+  .cat-bar-label{width:72px;font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
+  .cat-bar-track{flex:1;height:7px;background:var(--surface2);border-radius:4px;overflow:hidden}
+  .cat-bar-fill{height:100%;border-radius:4px;transition:width .4s ease}
+  .cat-bar-amt{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);width:55px;text-align:right;flex-shrink:0}
+
+  /* ═══ AUSWERTUNG PAGE ═══ */
+  .year-nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:20px;font-family:'DM Mono',monospace;font-size:13px}
+  .year-nav button{background:var(--surface2);border:1px solid var(--border);color:var(--text);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:14px}
+  #currentYear{font-weight:600;color:var(--text);min-width:50px;text-align:center}
+
+  /* BAR CHART */
+  .bar-chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px}
+  .bar-chart-wrap h3{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
+  .bar-chart{display:flex;align-items:flex-end;gap:6px;height:120px;padding-bottom:20px;position:relative}
+  .bar-chart::after{content:'';position:absolute;bottom:20px;left:0;right:0;height:1px;background:var(--border)}
+  .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
+  .bar-fill{width:100%;border-radius:4px 4px 0 0;transition:height .5s ease;min-height:2px;background:var(--accent);opacity:.7;cursor:pointer}
+  .bar-fill:hover{opacity:1}
+  .bar-fill.selected{opacity:1;outline:2px solid var(--accent)}
+  .bar-label{position:absolute;bottom:0;font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);white-space:nowrap}
+  .bar-val{font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);margin-bottom:2px}
+
+  /* MONTH CARDS */
+  .month-cards{display:flex;flex-direction:column;gap:8px}
+  .month-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;cursor:pointer;transition:background .15s}
+  .month-card:hover{background:var(--surface2)}
+  .month-card.selected{border-color:var(--accent)}
+  .mc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .mc-month{font-size:15px;font-weight:700;letter-spacing:-.3px}
+  .mc-total{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;color:var(--accent)}
+  .mc-bars{display:flex;gap:6px}
+  .mc-bar-item{flex:1}
+  .mc-bar-track{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-bottom:3px}
+  .mc-bar-fill{height:100%;border-radius:2px}
+  .mc-bar-label{font-family:'DM Mono',monospace;font-size:8px;color:var(--muted)}
+  .mc-stats{display:flex;gap:12px;margin-top:6px}
+  .mc-stat{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)}
+  .mc-stat span{color:var(--text)}
+
+  /* LOADING */
+  .loading{text-align:center;padding:30px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+  .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--accent);color:#0e0e0f;font-size:12px;font-weight:700;padding:9px 18px;border-radius:24px;transition:transform .3s ease;z-index:999;white-space:nowrap}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="logo">ka<span>$</span>se</div>
+  <div class="month-nav">
+    <button onclick="changeMonth(-1)">‹</button>
+    <span id="currentMonth"></span>
+    <button onclick="changeMonth(1)">›</button>
+  </div>
+</div>
+
+<nav>
+  <div class="nav-tab active" onclick="showPage('tracker')">📋 Tracker</div>
+  <div class="nav-tab" onclick="showPage('auswertung')">📊 Auswertung</div>
+</nav>
+
+<!-- ═══════════════ TRACKER PAGE ═══════════════ -->
+<div class="page active" id="page-tracker">
+
+  <div class="summary">
+    <div class="sum-card total">
+      <div class="sum-label">Gesamt</div>
+      <div class="sum-amount" id="sumTotal">—</div>
+      <div class="sum-sub" id="sumCount"></div>
+    </div>
+    <div class="sum-card card-pay">
+      <div class="sum-label">💳 Karte</div>
+      <div class="sum-amount" id="sumCard">—</div>
+      <div class="sum-sub" id="sumCardCount"></div>
+    </div>
+    <div class="sum-card cash-pay">
+      <div class="sum-label">💵 Bar</div>
+      <div class="sum-amount" id="sumCash">—</div>
+      <div class="sum-sub" id="sumCashCount"></div>
+    </div>
+  </div>
+
+  <div class="add-box">
+    <h3>+ Neue Ausgabe</h3>
+    <div class="form-row">
+      <input type="text" id="txName" placeholder="Beschreibung" />
+      <input type="number" id="txAmount" placeholder="Betrag €" step="0.01" min="0" />
+    </div>
+    <div class="form-row" style="margin-bottom:10px">
+      <input type="date" id="txDate" />
+      <div class="pay-toggle">
+        <div class="pay-btn active-card" id="btnKarte" onclick="setPayment('karte')">💳 Karte</div>
+        <div class="pay-btn" id="btnBar" onclick="setPayment('bar')">💵 Bar</div>
+      </div>
+    </div>
+    <div class="cat-grid" id="catGrid"></div>
+    <button class="btn-add" id="btnAdd" onclick="addTransaction()">Eintragen →</button>
+  </div>
+
+  <div class="tx-header">
+    <h3>Verlauf</h3>
+    <button class="export-btn" onclick="exportCSV()">↓ CSV</button>
+  </div>
+  <div class="filter-row" id="filterRow"></div>
+  <div class="tx-list" id="txList"><div class="loading"><span class="spinner"></span>Lade...</div></div>
+
+  <div class="chart-box">
+    <h3>Kategorien diesen Monat</h3>
+    <div class="cat-bars" id="catBars"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ AUSWERTUNG PAGE ═══════════════ -->
+<div class="page" id="page-auswertung">
+
+  <div class="year-nav">
+    <button onclick="changeYear(-1)">‹</button>
+    <span id="currentYear"></span>
+    <button onclick="changeYear(1)">›</button>
+  </div>
+
+  <div class="bar-chart-wrap">
+    <h3>Ausgaben pro Monat</h3>
+    <div class="bar-chart" id="barChart"></div>
+  </div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Alle Monate</span>
+    <button class="export-btn" onclick="exportYearCSV()">↓ Jahr CSV</button>
+  </div>
+  <div class="month-cards" id="monthCards"><div class="loading"><span class="spinner"></span>Lade...</div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────
+const API = "/api";  // relativ → funktioniert hinter nginx
+
+const CATS = [
+  {id:'essen',    label:'🍕 Essen',         color:'#ff8c42'},
+  {id:'transport',label:'🚇 Transport',      color:'#4d9fff'},
+  {id:'einkauf',  label:'🛒 Einkauf',        color:'#c8f135'},
+  {id:'unterhaltung',label:'🎮 Entertainment',color:'#a855f7'},
+  {id:'gesundheit',label:'💊 Gesundheit',    color:'#6dde8a'},
+  {id:'wohnen',   label:'🏠 Wohnen',         color:'#f1c135'},
+  {id:'kleidung', label:'👕 Kleidung',        color:'#f87171'},
+  {id:'sonstiges',label:'✦ Sonstiges',       color:'#888'},
+];
+const CAT = Object.fromEntries(CATS.map(c=>[c.id,c]));
+
+let selCat = 'essen';
+let selPay = 'karte';
+let activeFilter = 'all';
+let viewMonth = new Date().getMonth();
+let viewYear  = new Date().getFullYear();
+let auswYear  = new Date().getFullYear();
+let allMonthStats = [];
+
+// ─── INIT ─────────────────────────────────────────────────────
+function init(){
+  buildCatGrid();
+  buildFilterPills();
+  document.getElementById('txDate').value = today();
+  updateMonthLabel();
+  updateYearLabel();
+  loadTracker();
+  handleUrlParams();
+}
+
+function today(){ return new Date().toISOString().split('T')[0] }
+function fmt(n){ return '€'+(+n).toFixed(2).replace('.',',') }
+function fmtDate(d){ const p=d.split('-'); return `${p[2]}.${p[1]}.${p[0]}` }
+function monthKey(){ return `${viewYear}-${String(viewMonth+1).padStart(2,'0')}` }
+
+// ─── NAVIGATION ───────────────────────────────────────────────
+function showPage(p){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  document.querySelectorAll('.nav-tab')[p==='tracker'?0:1].classList.add('active');
+  if(p==='auswertung') loadAuswertung();
+}
+
+function changeMonth(d){
+  viewMonth+=d;
+  if(viewMonth>11){viewMonth=0;viewYear++}
+  if(viewMonth<0){viewMonth=11;viewYear--}
+  updateMonthLabel();
+  loadTracker();
+}
+function updateMonthLabel(){
+  const n=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  document.getElementById('currentMonth').textContent=`${n[viewMonth]} ${viewYear}`;
+}
+function changeYear(d){
+  auswYear+=d;
+  updateYearLabel();
+  loadAuswertung();
+}
+function updateYearLabel(){ document.getElementById('currentYear').textContent=auswYear }
+
+// ─── FORM ─────────────────────────────────────────────────────
+function buildCatGrid(){
+  document.getElementById('catGrid').innerHTML=CATS.map(c=>`
+    <div class="cat-pill ${c.id===selCat?'selected':''}" onclick="selCat='${c.id}';buildCatGrid()">${c.label}</div>
+  `).join('');
+}
+function buildFilterPills(){
+  document.getElementById('filterRow').innerHTML=`
+    <div class="filter-pill active" onclick="setFilter(this,'all')">Alle</div>
+    <div class="filter-pill" onclick="setFilter(this,'karte')">💳 Karte</div>
+    <div class="filter-pill" onclick="setFilter(this,'bar')">💵 Bar</div>
+    ${CATS.map(c=>`<div class="filter-pill" onclick="setFilter(this,'${c.id}')">${c.label}</div>`).join('')}
+  `;
+}
+function setFilter(el,f){
+  document.querySelectorAll('.filter-pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active'); activeFilter=f; loadTracker();
+}
+function setPayment(t){
+  selPay=t;
+  document.getElementById('btnKarte').className='pay-btn'+(t==='karte'?' active-card':'');
+  document.getElementById('btnBar').className='pay-btn'+(t==='bar'?' active-cash':'');
+}
+
+// ─── API CALLS ────────────────────────────────────────────────
+async function loadTracker(){
+  const m = monthKey();
+  const [txRes, catRes] = await Promise.all([
+    fetch(`${API}/transactions?month=${m}`),
+    fetch(`${API}/stats/categories?month=${m}`)
+  ]);
+  const txs  = await txRes.json();
+  const cats = await catRes.json();
+  renderSummary(txs);
+  renderList(txs);
+  renderCatBars(cats);
+}
+
+async function addTransaction(data){
+  const btn = document.getElementById('btnAdd');
+  const name   = data?.name   || document.getElementById('txName').value.trim();
+  const amount = data?.amount || parseFloat(document.getElementById('txAmount').value);
+  const date   = data?.date   || document.getElementById('txDate').value;
+  const cat    = data?.cat    || selCat;
+  const pay    = data?.pay    || selPay;
+
+  if(!name || isNaN(amount) || amount<=0 || !date){
+    showToast('⚠ Alle Felder ausfüllen!'); return;
+  }
+
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/transactions`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name,amount,date,cat,pay})
+    });
+    if(!res.ok) throw new Error();
+    if(!data){
+      document.getElementById('txName').value='';
+      document.getElementById('txAmount').value='';
+      document.getElementById('txDate').value=today();
+    }
+    const d=new Date(date); viewMonth=d.getMonth(); viewYear=d.getFullYear();
+    updateMonthLabel();
+    showToast(`✓ ${name} — ${fmt(amount)}`);
+    loadTracker();
+  } catch(e){
+    showToast('⚠ Fehler beim Speichern');
+  } finally {
+    btn.disabled=false;
+  }
+}
+
+async function deleteTransaction(id){
+  await fetch(`${API}/transactions/${id}`,{method:'DELETE'});
+  loadTracker();
+}
+
+async function loadAuswertung(){
+  document.getElementById('monthCards').innerHTML='<div class="loading"><span class="spinner"></span>Lade...</div>';
+  document.getElementById('barChart').innerHTML='';
+
+  const [monthsRes, catRes] = await Promise.all([
+    fetch(`${API}/stats/months`),
+    fetch(`${API}/stats/categories?year=${auswYear}`)
+  ]);
+  const allMonths = await monthsRes.json();
+  const yearCats  = await catRes.json();
+
+  // Filtern auf aktuelles Jahr
+  const yearMonths = allMonths.filter(m=>m.month.startsWith(String(auswYear)));
+  allMonthStats = allMonths;
+
+  renderBarChart(yearMonths);
+  renderMonthCards(allMonths);
+}
+
+// ─── RENDER ───────────────────────────────────────────────────
+function renderSummary(txs){
+  const total = txs.reduce((s,t)=>s+t.amount,0);
+  const card  = txs.filter(t=>t.payment==='karte');
+  const cash  = txs.filter(t=>t.payment==='bar');
+  document.getElementById('sumTotal').textContent = fmt(total);
+  document.getElementById('sumCount').textContent = `${txs.length} Buchungen`;
+  document.getElementById('sumCard').textContent  = fmt(card.reduce((s,t)=>s+t.amount,0));
+  document.getElementById('sumCardCount').textContent = `${card.length}×`;
+  document.getElementById('sumCash').textContent  = fmt(cash.reduce((s,t)=>s+t.amount,0));
+  document.getElementById('sumCashCount').textContent = `${cash.length}×`;
+}
+
+function renderList(txs){
+  const filtered = activeFilter==='all' ? txs
+    : activeFilter==='karte' ? txs.filter(t=>t.payment==='karte')
+    : activeFilter==='bar'   ? txs.filter(t=>t.payment==='bar')
+    : txs.filter(t=>t.category===activeFilter);
+
+  const list = document.getElementById('txList');
+  if(!filtered.length){
+    list.innerHTML='<div class="empty-state"><div class="big">📭</div>Keine Ausgaben</div>'; return;
+  }
+  list.innerHTML = filtered.map(t=>{
+    const c = CAT[t.category] || CAT['sonstiges'];
+    return `
+    <div class="tx-item">
+      <div class="tx-icon" style="background:${c.color}22">${c.label.split(' ')[0]}</div>
+      <div class="tx-info">
+        <div class="tx-name">${esc(t.name)}</div>
+        <div class="tx-meta">
+          <span>${fmtDate(t.date)}</span>
+          <span class="pay-badge ${t.payment}">${t.payment==='karte'?'Karte':'Bar'}</span>
+          <span style="color:${c.color}">${c.label}</span>
+        </div>
+      </div>
+      <div class="tx-amount">−${fmt(t.amount)}</div>
+      <button class="tx-delete" onclick="deleteTransaction(${t.id})">×</button>
+    </div>`;
+  }).join('');
+}
+
+function renderCatBars(cats){
+  const bars = document.getElementById('catBars');
+  if(!cats.length){ bars.innerHTML='<div style="color:var(--muted);font-family:\'DM Mono\',monospace;font-size:11px">Noch keine Daten</div>'; return; }
+  const max = Math.max(...cats.map(c=>c.total));
+  bars.innerHTML = cats.map(c=>{
+    const info = CAT[c.category]||CAT['sonstiges'];
+    return `
+    <div class="cat-bar-row">
+      <div class="cat-bar-label">${info.label.split(' ')[0]} ${c.category}</div>
+      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${(c.total/max*100).toFixed(1)}%;background:${info.color}"></div></div>
+      <div class="cat-bar-amt">${fmt(c.total)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderBarChart(months){
+  const chart = document.getElementById('barChart');
+  if(!months.length){ chart.innerHTML='<div style="color:var(--muted);font-family:\'DM Mono\',monospace;font-size:11px;padding:20px">Keine Daten</div>'; return; }
+
+  // Alle 12 Monate des Jahres aufbauen
+  const monthNames=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  const byMonth = Object.fromEntries(months.map(m=>[m.month.split('-')[1], m]));
+  const max = Math.max(...months.map(m=>m.total), 1);
+
+  chart.innerHTML = monthNames.map((_,i)=>{
+    const key = String(i+1).padStart(2,'0');
+    const m = byMonth[key];
+    const h = m ? Math.max((m.total/max)*95, 4) : 0;
+    const isNow = i===new Date().getMonth() && auswYear===new Date().getFullYear();
+    return `
+    <div class="bar-col">
+      ${m ? `<div class="bar-val">${fmt(m.total).replace('€','')}</div>` : '<div class="bar-val" style="opacity:0">0</div>'}
+      <div class="bar-fill${isNow?' selected':''}" style="height:${h}px;background:${isNow?'var(--accent)':'#4a5a30'}"
+           title="${monthNames[i]}: ${m?fmt(m.total):'€0'}"></div>
+      <div class="bar-label">${monthNames[i]}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderMonthCards(allMonths){
+  const cards = document.getElementById('monthCards');
+  if(!allMonths.length){
+    cards.innerHTML='<div class="empty-state"><div class="big">📭</div>Noch keine Daten</div>'; return;
+  }
+  const maxTotal = Math.max(...allMonths.map(m=>m.total));
+  const monthNames=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+
+  cards.innerHTML = allMonths.map(m=>{
+    const [y,mo] = m.month.split('-');
+    const name = `${monthNames[parseInt(mo)-1]} ${y}`;
+    const cardPct = m.total>0 ? (m.card/m.total*100).toFixed(0) : 0;
+    const cashPct = m.total>0 ? (m.cash/m.total*100).toFixed(0) : 0;
+    const totalPct = (m.total/maxTotal*100).toFixed(0);
+    return `
+    <div class="month-card" onclick="jumpToMonth('${m.month}')">
+      <div class="mc-top">
+        <div class="mc-month">${name}</div>
+        <div class="mc-total">${fmt(m.total)}</div>
+      </div>
+      <div class="mc-bar-item">
+        <div class="mc-bar-track"><div class="mc-bar-fill" style="width:${totalPct}%;background:var(--accent);opacity:.6"></div></div>
+      </div>
+      <div class="mc-stats">
+        <div class="mc-stat">💳 <span>${fmt(m.card)}</span></div>
+        <div class="mc-stat">💵 <span>${fmt(m.cash)}</span></div>
+        <div class="mc-stat">📝 <span>${m.count}×</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function jumpToMonth(monthStr){
+  const [y,m] = monthStr.split('-');
+  viewYear=parseInt(y); viewMonth=parseInt(m)-1;
+  updateMonthLabel();
+  showPage('tracker');
+  loadTracker();
+}
+
+// ─── EXPORT ───────────────────────────────────────────────────
+function exportCSV(){
+  window.location.href=`${API}/export?month=${monthKey()}`;
+}
+function exportYearCSV(){
+  window.location.href=`${API}/export?year=${auswYear}`;
+}
+
+// ─── URL PARAMS (Shortcut) ────────────────────────────────────
+function handleUrlParams(){
+  const p = new URLSearchParams(window.location.search);
+  if(p.has('amount')&&p.has('name')){
+    addTransaction({
+      name:   p.get('name'),
+      amount: parseFloat(p.get('amount').replace(',','.')),
+      date:   p.get('date')||today(),
+      cat:    p.get('cat')||'sonstiges',
+      pay:    p.get('pay')||'karte',
+    });
+    window.history.replaceState({},'',window.location.pathname);
+  }
+}
+
+// ─── UTILS ────────────────────────────────────────────────────
+function esc(s){ return s.replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+init();
+</script>
+</body>
+</html>
