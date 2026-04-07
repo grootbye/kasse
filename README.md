@@ -71,9 +71,9 @@ print('Done')
 ```
 Deploy updated files:
 ```bash
-scp app.py root@192.168.178.107:/opt/kasse/backend/app.py
-scp index.html root@192.168.178.107:/opt/kasse/frontend/index.html
-ssh root@192.168.178.107 "systemctl restart kasse"
+scp app.py root@IP:/opt/kasse/backend/app.py
+scp index.html root@IP:/opt/kasse/frontend/index.html
+ssh root@IP "systemctl restart kasse"
 ```
 ---
 How It Works
