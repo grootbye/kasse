@@ -3,6 +3,7 @@
 # Kasse Setup Script — Ubuntu/Debian VM
 # Ausführen als root: bash setup.sh
 # ─────────────────────────────────────────────────────────────
+# outdated -> prompt AI to generate a new one ;)
 set -e
 
 echo "══════════════════════════════════════"
